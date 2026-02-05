@@ -724,6 +724,8 @@ const server = net.createServer((socket) => {
         const fanLevel4Running = !!buffer[50];
         const padding = buffer[51]; // unused
         // console.log("🔴Padding: ", padding, " || ", "Door Status: ", doorStatus, "🔴")
+        console.log("Internal temp: ", insideTemperature);
+        console.log("Door: ", doorStatus);
         console.log("Fire Alarm: ", fireAlarm);
         if (padding === 0x31 && !alreadyReplied) {
           sendX(socket);

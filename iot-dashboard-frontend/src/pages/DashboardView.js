@@ -119,7 +119,7 @@ function DashboardView() {
   // UseEffect for fetching Data
   useEffect(() => {
     console.log('🚨Starting data fetch interval (5s)🚨');
-    const interval = setInterval(fetchData, 2000);
+    const interval = setInterval(fetchData, 5000);
 
     fetchData();
 
@@ -434,9 +434,9 @@ function DashboardView() {
       <div className="logo-panel">
 
         <div
-        style={{
-          display: "flex"
-        }}
+          style={{
+            display: "flex"
+          }}
         >
           <div
             style={{
@@ -624,8 +624,18 @@ function DashboardView() {
                     {alarmKeys.map((alarm, i) => (
                       <div key={i} className="alarm-indicator">
                         <div
-                          className={`alarm-led ${latestReading[alarm.key] ? "active" : ""
-                            }`}
+                          className={`alarm-led ${(
+                            alarm.key === "fireAlarm" &&
+                            latestReading.doorStatus === "CLOSED" &&
+                            latestReading.insideTemperature >= 48 &&
+                            latestReading.insideTemperature < 70
+                            ? ""
+                            : latestReading[alarm.key] === 87
+                              ? "wait"
+                              : latestReading[alarm.key]
+                                ? "active"
+                                : ""
+                          )}`}
                         />
                         <div className="alarm-label">{alarm.Name}</div>
                       </div>
@@ -659,7 +669,7 @@ function DashboardView() {
                                 }`}
                             />
                             <div className="alarm-label">{status.Name}</div>
-                            <div className="alarm-attempt">{3-latestReading[status.key]} Attempt Left</div>
+                            <div className="alarm-attempt">{3 - latestReading[status.key]} Attempt Left</div>
                           </div>
                         );
                       }
@@ -975,7 +985,7 @@ function DashboardView() {
                     key={mac}
                     className={`device-tile ${colorClass} ${selectedMac === mac ? "selected" : ""
                       }`}
-                    onClick={() => {setSelectedMac(mac); setSelectedDevice(device.locationId)}}
+                    onClick={() => { setSelectedMac(mac); setSelectedDevice(device.locationId) }}
                   >
                     {device.locationId || mac}
                   </div>

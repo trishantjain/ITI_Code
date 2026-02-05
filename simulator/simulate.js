@@ -4,11 +4,11 @@ const csv = require('csv-parser');
 const fs = require('fs');
 
 
-const TOTAL_DEVICES = 11;
+const TOTAL_DEVICES = 1;
 const devices = [];
 let csvData = [];
 let currentSecond = 0;
-let isCSVMode = true;
+let isCSVMode = false;
 
 // 🔥 PRE-INDEXING: Fast lookup structure
 let csvDataBySecond = new Map(); // { second → [row1, row2, ...] }
@@ -211,17 +211,18 @@ function startDevice(mac, index) {
 
           // SENSOR DATA GENERATION
           const humidity = triggerAlarm ? 85 + Math.random() * 10 : 55 + Math.random() * 5;
-          const insideTemp = triggerAlarm ? 55 + Math.random() * 5 : 35 + Math.random() * 3;
+          // const insideTemp = triggerAlarm ? 55 + Math.random() * 5 : 35 + Math.random() * 3;
+          const insideTemp = 50;
           const outsideTemp = triggerAlarm ? 65 + Math.random() * 5 : 40 + Math.random() * 3;
           const lockStatus = Math.random() < 0.5 ? 1 : 0;
-          const doorStatus = 0;
+          const doorStatus = 1;
           const waterLogging = 1;
           const waterLeakage = !triggerAlarm && Math.random() < 0.2 ? 1 : 0;
           const outputVoltage = triggerAlarm ? 2.5 + Math.random() * 0.2 : 3.3 + Math.random() * 0.1;
           const inputVoltage = outputVoltage * 10;
           const batteryBackup = triggerAlarm ? 5 + Math.random() * 2 : 12 + Math.random() * 3;
           const alarmActive = waterLogging || waterLeakage;
-          const fireAlarm = 0;
+          const fireAlarm = 1;
 
           const fan1 = Math.random() < 0.9 ? 1 : 0;
           const fan2 = Math.random() < 0.9 ? 1 : 0;
@@ -477,35 +478,47 @@ function startDataDispatcher() {
 
 async function initializeSimulator() {
   try {
-    console.log('📄 Attempting to load CSV data...');
-    csvData = await readCSV('C:/Users/ITI/Documents/TechnoTrendz/simulator/sim_pack.csv');
+if (isCSVMode === true) {
 
-    preIndexCSVData();
+      console.log('📄 Attempting to load CSV data...');
+      csvData = await readCSV(process.env.CSV_PATH || './sim_pack.csv');
 
-    // 🔍 Debug: Analyze CSV data
-    const uniqueMACs = [...new Set(csvData.map(row => row.mac))];
-    console.log(`🔍 CSV Analysis:`);
-    console.log(`   Total rows: ${csvData.length}`);
-    console.log(`   Unique MACs: ${uniqueMACs.length}`);
-    console.log(`   MACs in CSV: ${uniqueMACs.join(', ')}`);
+      preIndexCSVData();
 
-    // Show seconds distribution
-    const secondsSample = [...new Set(csvData.map(row => parseInt(row.seconds)))].sort((a, b) => a - b).slice(0, 10);
-    console.log(`   First 10 seconds: [${secondsSample.join(', ')}]`);
+      // 🔍 Debug: Analyze CSV data
+      const uniqueMACs = [...new Set(csvData.map(row => row.mac))];
+      console.log(`🔍 CSV Analysis:`);
+      console.log(`   Total rows: ${csvData.length}`);
+      console.log(`   Unique MACs: ${uniqueMACs.length}`);
+      console.log(`   MACs in CSV: ${uniqueMACs.join(', ')}`);
 
-    // Start all devices
-    for (let i = 0; i < TOTAL_DEVICES; i++) {
-      const mac = generateMac(i);
-      startDevice(mac, i);
-      devices.push(mac);
-    }
+      // Show seconds distribution
+      const secondsSample = [...new Set(csvData.map(row => parseInt(row.seconds)))].sort((a, b) => a - b).slice(0, 10);
+      console.log(`   First 10 seconds: [${secondsSample.join(', ')}]`);
 
-    // 🔧 NEW: Start the central data dispatcher after a brief delay
-    setTimeout(() => {
-      startDataDispatcher();
-    }, 3000);
+      // Start all devices
+      for (let i = 0; i < TOTAL_DEVICES; i++) {
+        const mac = generateIP(i);
+        startDevice(mac, i);
+        devices.push(mac);
+      }
 
-  } catch (err) {
+      // 🔧 NEW: Start the central data dispatcher after a brief delay
+      setTimeout(() => {
+        startDataDispatcher();
+      }, 3000);
+
+    } else {
+      console.log('❌ CSV not found, using FULL RANDOM mode...');
+      isCSVMode = false;
+
+      // Start all devices in random mode
+      for (let i = 0; i < TOTAL_DEVICES; i++) {
+        const mac = generateIP(i);
+        startDevice(mac, i);
+        devices.push(mac);
+      }
+    }  } catch (err) {
     console.log('❌ CSV not found, using FULL RANDOM mode...');
     isCSVMode = false;
 
