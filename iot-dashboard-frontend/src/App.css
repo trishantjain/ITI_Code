@@ -1,0 +1,751 @@
+/*  🔄🔍📈✅📡⚠️❌🔴🟢🔧🌡️🌀🧪🚨📢⚙️🕛⏰🔌⚡*/
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #000;
+  color: #fff;
+}
+
+/* Grid layout for dashboard */
+.dashboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 50% 50%;
+  gap: 12px;
+  height: 100vh;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    height: auto;
+  }
+}
+
+.panel {
+  background-color: #111;
+  padding: 12px;
+  border-radius: 16px;
+  overflow: auto;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+}
+
+.panel h2.selected-heading {
+  font-size: 1.2rem;
+}
+
+.panel h2.selected-heading span {
+  font-weight: normal;
+  font-size: 1rem;
+  color: #ccc;
+}
+
+/* Scrollbar styling */
+.panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panel::-webkit-scrollbar-thumb {
+  background-color: #555;
+  border-radius: 3px;
+}
+
+.panel::-webkit-scrollbar-thumb:hover {
+  background-color: #888;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  margin: 10px 0;
+  gap: 8px;
+}
+
+.tabs button {
+  flex: 1;
+  padding: 6px;
+  border: none;
+  border-radius: 6px;
+  background-color: #333;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.tabs button.active {
+  background-color: #1a73e8;
+}
+
+/* Gauges */
+.gauges.grid-3x3 {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  gap: 12px;
+  justify-items: center;
+}
+
+.gauge-box.small {
+  width: 90px;
+  height: 90px;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.gauge-label {
+  text-align: center;
+  margin-top: 5px;
+  font-size: 12px;
+}
+
+/* .gauge-box.alarm {
+  border: 4px solid red;
+  box-shadow: 0 0 10px red;
+  animation: blink 1s infinite;
+  border-radius: 80%;
+} */
+
+@keyframes blink {
+
+  0%,
+  100% {
+    border-color: transparent;
+  }
+
+  50% {
+    border-color: red;
+  }
+}
+
+/* Fan + Alarm Section */
+.fan-status-line,
+.alarm-line {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin: -10px 0;
+}
+
+.fan-light,
+.alarm-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.fan-light-circle,
+.alarm-led {
+  width: 18px;
+  height: 18px;
+  background-color: #555;
+  box-shadow: 0 0 6px #000;
+}
+
+.fan-light-circle.running {
+  background-color: #00ff00;
+  box-shadow: 0 0 8px #00ff00;
+}
+
+.fan-light-circle.stopped {
+  background-color: #ff0000;
+  box-shadow: 0 0 8px #ff0000;
+}
+
+.fan-label,
+.alarm-label {
+  font-size: 0.8rem;
+  color: #ccc;
+  margin-top: 2px;
+}
+
+.alarm-led.active {
+  background-color: red;
+  box-shadow: 0 0 12px red;
+  animation: blinkAlarm 1s infinite alternate;
+}
+
+.alarm-led.warn {
+  background-color: orange;
+  box-shadow: 0 0 12px orange;
+  animation: blinkAlarm 1s infinite alternate;
+}
+.alarm-led.danger {
+  background-color: yellow;
+  box-shadow: 0 0 12px yellow;
+  animation: blinkAlarm 1s infinite alternate;
+}
+
+.alarm-attempt{
+  color: white;
+  font-size: 0.75rem;
+}
+
+/* .alarm-led.active {
+  background-color: red;
+  box-shadow: 0 0 12px red;
+  animation: blinkAlarm 1s infinite alternate;
+}
+
+.alarm-led.warn {
+  background-color: orange;
+  box-shadow: 0 0 12px orange;
+  animation: blinkAlarm 1s infinite alternate;
+}
+.alarm-led.danger {
+  background-color: yellow;
+  box-shadow: 0 0 12px yellow;
+  animation: blinkAlarm 1s infinite alternate;
+} */
+
+/* .alarm-led.pass-danger:hover::before {
+  display: inline-block;
+  border: 1px solid white;
+  background-color: grey;
+  content: "2 Attempts Left";
+}
+
+.alarm-led.pass-warn:hover::before {
+  display: inline-block;
+  border: 1px solid white;
+  background-color: grey;
+  content: "1 Attempts Left";
+}
+
+.alarm-led.pass-active:hover::before {
+  display: inline-block;
+  border: 1px solid white;
+  background-color: grey;
+  content: "0 Attempts Left";
+} */
+
+
+@keyframes blinkAlarm {
+  0% {
+    box-shadow: 0 0 8px red;
+  }
+
+  100% {
+    box-shadow: 0 0 20px red;
+  }
+}
+
+/* Power & Lock buttons */
+.fan-power-buttons.aligned {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: -10px;
+}
+
+.power-btn {
+  width: 50px;
+  height: 50px;
+  background: #111;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
+}
+
+/* .power-btn.active {
+  background-color: black;
+  box-shadow: 0 0 20px limegreen;
+} */
+
+.power-btn::before {
+  background-image: url('../../iot-dashboard-frontend/src/pages/power-on-off.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  filter: brightness(0) invert(1);
+  content: '';
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+}
+
+.power-btn.active::before {
+  color: #00ff00;
+}
+
+.power-btn.active::before{
+  filter: brightness(0) saturate(100%) invert(48%) sepia(98%) saturate(1733%) hue-rotate(82deg);
+}
+
+.lock-btn {
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  background: #222;
+  color: #fff;
+  border: 2px solid #444;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* Snapshot placeholder */
+.snapshots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.snapshots-grid img {
+  border-radius: 4px;
+  width: 100%;
+}
+
+.snapshot-label{
+  font-size: 11px;
+}
+
+/* Devices */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.device-tile {
+  padding: 10px;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: bold;
+  background-color: #222;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.device-tile.connected {
+  background-color: #2e7d32;
+}
+
+.device-tile.gauge-alarm {
+  background-color: orange;
+  color: #000;
+}
+
+.device-tile.status-alarm {
+  background-color: yellow;
+  color: #000;
+}
+
+.device-tile.disconnected {
+  background-color: #ff4d4d;
+  color: #fff;
+  box-shadow: 0 0 8px #ff4d4d;
+}
+
+.device-tile.selected {
+  border: 2px solid #fff;
+  box-shadow: 0 0 10px #fff;
+}
+
+.device-tile.disconnected { order: 1; }      /* Show online devices first */
+.device-tile.status-alarm { order: 2; }     /* Then offline devices */
+.device-tile.gauge-alarm { order: 3; }     /* Then warning state */
+.device-tile.connected { order: 3; }     /* Then warning state */
+.device-tile.disconnected { order: 0; }    /* Selected device always on top */
+
+
+/* Map markers */
+.custom-marker {
+  background: transparent;
+  border: none;
+}
+
+.marker-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+
+.marker-dot.connected {
+  background-color: limegreen;
+}
+
+.marker-dot.status-alarm {
+  background-color: yellow;
+}
+
+.marker-dot.gauge-alarm {
+  background-color: orange;
+}
+
+.marker-dot.disconnected {
+  background-color: red;
+  border-radius: 50%;
+  width: 15px;
+  height: 15px;
+}
+
+/* Admin Dashboard */
+.admin-dashboard {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 220px;
+  background-color: #111;
+  padding: 20px;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar li {
+  cursor: pointer;
+  padding: 10px;
+  border-bottom: 1px solid #333;
+}
+
+.sidebar li.active {
+  background-color: #333;
+  font-weight: bold;
+}
+
+.tab-content {
+  flex-grow: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  max-width: 400px;
+}
+
+.admin-form input,
+.admin-form select,
+.admin-form button {
+  margin-bottom: 10px;
+  padding: 10px;
+}
+
+/* Camera Feed Layout */
+.camera-feed-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: nowrap;
+  width: 100%;
+  gap: 20px;
+}
+
+.camera-frame {
+  aspect-ratio: 4 / 3;
+  /* or match your stream */
+  width: 450px;
+  height: 210px;
+  border: 3px solid #444;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.camera-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  transform-origin: center;
+  /* 🟢 Shows entire feed, may have letterboxing */
+}
+
+.camera-controls {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.camera-controls button {
+  padding: 8px 12px;
+  background-color: #1a73e8;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.camera-controls button:hover {
+  background-color: #444;
+}
+
+.device-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 0.9rem;
+  background-color: #111;
+  color: #eee;
+  border: 1px solid #444;
+}
+
+.device-table th,
+.device-table td {
+  padding: 8px 12px;
+  border: 1px solid #333;
+  text-align: left;
+}
+
+.device-table th {
+  background-color: #222;
+  font-weight: bold;
+}
+
+.device-table a {
+  color: #00f2ff;
+  text-decoration: underline;
+}
+
+.admin-dashboard {
+  display: flex;
+}
+
+.sidebar {
+  width: 220px;
+  background-color: #000;
+  ;
+  color: white;
+  height: 100vh;
+  transition: width 0.3s ease;
+  position: relative;
+  padding-top: 1rem;
+}
+
+.sidebar.collapsed {
+  width: 60px;
+}
+
+.sidebar .collapse-toggle {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.3rem;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  cursor: pointer;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar ul li {
+  padding: 12px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sidebar ul li.active {
+  background-color: #343454;
+}
+
+.tab-content {
+  flex: 1;
+  padding: 1rem;
+  background-color: #111;
+  /* or #000, depending on your original layout */
+  color: white;
+}
+
+.historical-data-tab .chart-box {
+  padding: 0.75rem;
+  background: #1e1e1e;
+  margin: 1rem;
+  border-radius: 10px;
+  box-shadow: 0 0 10px #333;
+  width: 90%;
+  max-width: 400px;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  /* 3 charts in a row */
+  gap: 8px;
+  /* spacing between charts */
+  padding: 5px;
+}
+
+.chart-box {
+  background-color: #000;
+  /* make chart box black */
+  border-radius: 8px;
+  padding: 5px;
+  height: 180px;
+  /* adjust as needed */
+  color: white;
+  /* keep labels readable */
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  /* optional: soft shadow */
+}
+
+.snapshot-table {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.snapshot-cell {
+  background-color: #1e1e1e;
+  color: white;
+  padding: 10px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 13px;
+  box-shadow: 0 0 4px #00000088;
+}
+
+.loader {
+  color: white;
+  font-weight: bold;
+  padding: 20px;
+  font-size: 18px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.3;
+  }
+}
+
+.marker-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: gray;
+  border: 2px solid white;
+}
+
+.marker-dot.connected {
+  background-color: green;
+}
+
+.marker-dot.gauge-alarm {
+  background-color: orange;
+}
+
+.marker-dot.status-alarm {
+  background-color: yellow;
+}
+
+.marker-dot.disconnected {
+  background-color: red;
+}
+
+.theme-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 400px;
+}
+
+.theme-form label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.fan-light-circle.faulty {
+  width: 18px;
+  height: 18px;
+  background-color: #ff0000;
+  box-shadow: 0 0 8px #ff0000;
+}
+
+.fullscreen-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+}
+
+.modal-body {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+}
+
+.fullscreen-image {
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
+}
+
+.nav-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.3);
+  border: none;
+  color: white;
+  font-size: 2rem;
+  padding: 1rem;
+  cursor: pointer;
+  z-index: 10001;
+}
+
+.left-arrow {
+  left: 1rem;
+}
+
+.right-arrow {
+  right: 1rem;
+}
+
+.close-btn-fullscreen {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
