@@ -626,15 +626,15 @@ function DashboardView() {
                         <div
                           className={`alarm-led ${(
                             alarm.key === "fireAlarm" &&
-                            latestReading.doorStatus === "CLOSED" &&
-                            latestReading.insideTemperature >= 48 &&
-                            latestReading.insideTemperature < 70
-                            ? ""
-                            : latestReading[alarm.key] === 87
-                              ? "wait"
-                              : latestReading[alarm.key]
-                                ? "active"
-                                : ""
+                              latestReading.doorStatus === "CLOSED" &&
+                              latestReading.insideTemperature >= 48 &&
+                              latestReading.insideTemperature < 70
+                              ? ""
+                              : latestReading[alarm.key] === 87
+                                ? ""
+                                : latestReading[alarm.key]
+                                  ? "active"
+                                  : ""
                           )}`}
                         />
                         <div className="alarm-label">{alarm.Name}</div>
