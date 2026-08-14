@@ -76,10 +76,10 @@ async function startWorker() {
 
                 if (Array.isArray(fanStatus) && fanStatus.includes(2)) {
                     logLine =
-                        `[${now.toLocaleString()}] | MAC: ${mac} | ${alarms} | Fans: ${fanStatus}`;
+                        `[${now.toLocaleString("en-IN")}] | MAC: ${mac} | ${alarms} | Fans: ${fanStatus}`;
                 } else {
                     logLine =
-                        `[${now.toLocaleString()}] | MAC: ${mac} | ${alarms}`;
+                        `[${now.toLocaleString("en-IN")}] | MAC: ${mac} | ${alarms}`;
                 }
 
                 fs.appendFileSync(

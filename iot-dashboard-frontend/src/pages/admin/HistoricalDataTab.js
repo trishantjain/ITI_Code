@@ -17,6 +17,14 @@ const HistoricalDataTab = () => {
 
     const [loading, setLoading] = useState(false);
 
+    const [page, setPage] = useState(1);
+    const [limit] = useState(100);
+
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalRecords, setTotalRecords] = useState(0);
+
+    const [activeFilter, setActiveFilter] = useState("all");
+
     const filteredDevices = devices.filter((dev) =>
         dev.mac.toLowerCase().includes(query.toLowerCase())
     );
@@ -30,6 +38,30 @@ const HistoricalDataTab = () => {
             .then(setDevices)
             .catch((err) => console.error("Error fetching devices:", err));
     }, []);
+
+    const search = () => {
+        if (page !== 1) {
+
+            setPage(1);
+
+        } else {
+
+            fetchHistoricalData();
+
+        }
+    };
+
+
+    useEffect(() => {
+        if (
+            selectedMac &&
+            date &&
+            time &&
+            toTime
+        ) {
+            fetchHistoricalData();
+        }
+    }, [page]);
 
     const fetchHistoricalData = async () => {
         if (!date || !time || !toTime || !selectedMac) {
@@ -71,8 +103,9 @@ const HistoricalDataTab = () => {
             const toStr = formatLocalNoTz(toObj);
 
             console.log("Alarm-history:", selectedMac, fromStr, "->", toStr);
+            console.log("MAC =", JSON.stringify(selectedMac));
             const res = await fetch(
-                `${api}/alarm-history?mac=${encodeURIComponent(selectedMac)}&from=${encodeURIComponent(fromDateTime)}&to=${encodeURIComponent(toDateTime)}`
+                `${api}/alarm-history?mac=${encodeURIComponent(selectedMac.trim())}&from=${encodeURIComponent(fromDateTime)}&to=${encodeURIComponent(toDateTime)}&page=${page}&limit=${limit}`
             );
             const data = await res.json();
 
@@ -80,8 +113,19 @@ const HistoricalDataTab = () => {
             if (!res.ok)
                 throw new Error(data.error || "Failed to fetch historical data");
 
+            console.log("Response:", data);
+            console.log("Entries:", data.entries);
+            console.log("Count:", data.entries?.length);
+
+            if (Array.isArray(data.entries)) {
+                console.log("First entry:", data.entries[0]);
+            }
+
             // const hourlyReadings = downsampleHourly(data.alarms);
-            setAlarmEntries(Array.isArray(data.entries) ? data.entries : []);
+            setAlarmEntries(data.entries || []);
+            setTotalPages(data.totalPages || 1);
+            setTotalRecords(data.total || 0);
+
             // setSpecificReading(data.atSelectedTime);
             // console.log("specific: ", specificReading)
         } catch (err) {
@@ -234,7 +278,7 @@ const HistoricalDataTab = () => {
 
                         {/* BUTTON */}
                         <button
-                            onClick={fetchHistoricalData}
+                            onClick={search}
                             disabled={loading}
                             className={`px-8 py-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-xl
                         ${loading
@@ -330,11 +374,11 @@ const HistoricalDataTab = () => {
                             <thead className="sticky top-0 z-20 text-xs tracking-[0.15em] text-gray-300 uppercase border-b border-gray-700 bg-gradient-to-r from-gray-800 to-gray-900 backdrop-blur">
 
                                 <tr>
-                                    <th className="px-5 py-4 font-semibold">
+                                    <th className="px-5 py-2.5 font-semibold">
                                         Time
                                     </th>
 
-                                    <th className="px-5 py-4 font-semibold">
+                                    <th className="px-5 py-2.5 font-semibold">
                                         Alarm
                                     </th>
 
@@ -377,31 +421,41 @@ const HistoricalDataTab = () => {
                                         >
 
                                             {/* TIME */}
-                                            <td className="px-5 py-4 whitespace-nowrap">
+                                            <td className="px-5 py-2.5 whitespace-nowrap">
+                                                <span className="font-semibold text-white">
+                                                    {new Date(row.timestamp).toLocaleString("en-GB", {
+                                                        day: "2-digit",
+                                                        month: "2-digit",
+                                                        year: "numeric",
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                        second: "2-digit",
+                                                        hour12: true,
+                                                    }).replace(",", " |")}
+                                                </span>
+                                            </td>
+                                            {/* EVENT */}
+                                            <td className="px-5 py-4">
 
-                                                <div className="text-base font-semibold text-white">
+                                                <span
+                                                    className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide border shadow-md
+                                    ${row.event === "RAISED"
+                                                            ? "bg-red-500/15 text-red-300 border-red-500/30"
+                                                            : "bg-green-500/15 text-green-300 border-green-500/30"
+                                                        }`}
+                                                >
 
-                                                    {new Date(row.timestamp)
-                                                        .toLocaleTimeString(
-                                                            "en-IN",
-                                                            {
-                                                                hour: "2-digit",
-                                                                minute: "2-digit",
-                                                                second: "2-digit",
-                                                                hour12: true,
-                                                            }
-                                                        )}
+                                                    <span className="text-sm">
 
-                                                </div>
+                                                        {row.event === "RAISED"
+                                                            ? "🔴"
+                                                            : "🟢"}
 
-                                                <div className="mt-1 text-xs tracking-wide text-gray-500 uppercase">
+                                                    </span>
 
-                                                    {new Date(row.timestamp)
-                                                        .toLocaleDateString(
-                                                            "en-IN"
-                                                        )}
+                                                    {row.event}
 
-                                                </div>
+                                                </span>
 
                                             </td>
 
@@ -409,7 +463,7 @@ const HistoricalDataTab = () => {
                                             <td className="px-5 py-4">
 
                                                 <span
-                                                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-semibold border shadow-lg rounded-full text-sm font-semibold border
+                                                    className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wide border shadow-md
                                     ${isCritical
                                                             ? "bg-red-500/10 text-red-300 border-red-500/20"
                                                             : "bg-yellow-500/10 text-yellow-200 border-yellow-500/20"
@@ -443,35 +497,55 @@ const HistoricalDataTab = () => {
 
                                             </td>
 
-                                            {/* EVENT */}
-                                            <td className="px-5 py-4">
 
-                                                <span
-                                                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-semibold border shadow-lg rounded-full text-xs font-bold tracking-wide border shadow-md
-                                    ${row.event === "RAISED"
-                                                            ? "bg-red-500/15 text-red-300 border-red-500/30"
-                                                            : "bg-green-500/15 text-green-300 border-green-500/30"
-                                                        }`}
-                                                >
-
-                                                    <span className="text-sm">
-
-                                                        {row.event === "RAISED"
-                                                            ? "🔴"
-                                                            : "🟢"}
-
-                                                    </span>
-
-                                                    {row.event}
-
-                                                </span>
-
-                                            </td>
                                         </tr>
                                     );
                                 })}
                             </tbody>
                         </table>
+                    </div>
+
+                    <div className="flex items-center justify-between px-6 py-4 bg-gray-900 border-t border-gray-800">
+
+                        <div className="text-sm text-gray-300">
+                            Showing{" "}
+                            <span className="font-semibold">
+                                {(page - 1) * limit + 1}
+                            </span>
+                            {" - "}
+                            <span className="font-semibold">
+                                {Math.min(page * limit, totalRecords)}
+                            </span>
+                            {" of "}
+                            <span className="font-semibold">
+                                {totalRecords}
+                            </span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+
+                            <button
+                                disabled={page === 1}
+                                onClick={() => setPage(page - 1)}
+                                className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                ◀ Previous
+                            </button>
+
+                            <span className="text-sm text-gray-300">
+                                Page {page} of {totalPages}
+                            </span>
+
+                            <button
+                                disabled={page === totalPages}
+                                onClick={() => setPage(page + 1)}
+                                className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                Next ▶
+                            </button>
+
+                        </div>
+
                     </div>
                 </div>
             )}

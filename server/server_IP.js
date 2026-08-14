@@ -15,6 +15,11 @@ const axios = require('axios');
 const { spawn } = require('child_process');
 const readline = require("readline");
 const { connectRabbit, publishAlarm, publishSnapshot, consume, publishLog, publishAlarmResult } = require("./services/rabbit");
+const getAlarmFiles = require("./alarm/fileScanner");
+const parseAlarmLine = require("./alarm/alarmParser");
+const parseIstLogTimestamp = require("./alarm/timestampParser");
+const parseQueryDate = require("./alarm/dateParser");
+const alarmHistoryCache = require("./cache/alarmHistoryCache");
 
 
 const app = express();
@@ -715,7 +720,7 @@ app.post("/api/log-command", (req, res) => {
 
     const filePath = path.join(deviceCmdDir, fileName);
 
-    const timestamp = now.toLocaleString();
+    const timestamp = now.toLocaleString("en-IN");
     const logEntry = `[${timestamp}] | MAC:${mac} | ${status}  | COMMAND:"${command}" | MESSAGE:"${message}"`;
 
     // ✅ Send response immediately, log in background
@@ -806,22 +811,14 @@ app.post("/api/log-command", (req, res) => {
 app.get("/api/alarm-history", async (req, res) => {
   try {
     console.log("Calling Alarm History API")
-    const { mac, from, to } = req.query;
+    const { mac, from, to, page = 1, limit = 100 } = req.query;
+
+    const pageNo = Number(page);
+    const pageLimit = Number(limit);
 
     if (!mac || !from || !to) {
       return res.status(400).json({ error: "Missing mac, from or to" });
     }
-
-    const parseQueryDate = (value) => {
-      const raw = String(value || "").trim();
-      if (!raw) return new Date("invalid");
-      // If caller already supplies timezone/offset, respect it.
-      if (/[zZ]$/.test(raw) || /[+-]\d{2}:?\d{2}$/.test(raw)) {
-        return new Date(raw);
-      }
-      // Otherwise interpret as IST-local timestamp.
-      return new Date(`${raw}+05:30`);
-    };
 
     const fromDate = parseQueryDate(from);
     const toDate = parseQueryDate(to);
@@ -835,7 +832,9 @@ app.get("/api/alarm-history", async (req, res) => {
     }
 
     const macFolder = mac.replace(/[:. ]/g, "_");
-    const baseDir = `C:/CommandLogs/alarm/${macFolder}`;
+    const baseDir = path.join(alarmLogDir, macFolder);;
+
+    const cacheKey = `${mac}|${from}|${to}`;
 
     console.log("Base Dir: ", baseDir);
 
@@ -843,61 +842,32 @@ app.get("/api/alarm-history", async (req, res) => {
       console.log("Sending empty")
       return res.json({ mac, from, to, entries: [] });
     }
+    let cache = alarmHistoryCache.get(cacheKey);
 
-    // 🟢 Generate all hour blocks between from and to
-    const filesToScan = [];
-    let current = new Date(fromDate);
+    if (cache) {
 
-    while (current <= toDate) {
-      const ist = new Date(
-        current.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
-      );
+      console.log("✅ Returning alarm history from cache");
 
-      const dd = ist.getDate();
-      const mm = ist.getMonth() + 1;
-      const hh = ist.getHours();
+      const start = (pageNo - 1) * pageLimit;
 
-      const fileName = `${dd}_${mm}_${hh}_Alarm.inc`;
-      const filePath = `${baseDir}/${fileName}`;
+      return res.json({
+        entries: cache.entries.slice(start, start + pageLimit),
+        total: cache.total,
+        page: pageNo,
+        limit: pageLimit,
+        totalPages: Math.ceil(cache.total / pageLimit)
+      });
 
-      if (fs.existsSync(filePath)) {
-        filesToScan.push(filePath);
-      }
-
-      current.setHours(current.getHours() + 1);
     }
 
-    console.log("Files to scan: ", filesToScan);
+    // 🟢 Generate all hour blocks between from and to
+    const filesToScan = getAlarmFiles(
+      baseDir,
+      fromDate,
+      toDate
+    );
 
-    const parseIstLogTimestamp = (timestampText) => {
-      // Example: "24/2/2026, 3:00:20 pm"
-      const txt = String(timestampText || "").trim();
-      const match = txt.match(
-        /^(\d{1,2})\/(\d{1,2})\/(\d{4}),\s*(\d{1,2}):(\d{2}):(\d{2})\s*(am|pm)$/i
-      );
-      if (!match) return null;
-
-      const day = Number(match[1]);
-      const month = Number(match[2]);
-      const year = Number(match[3]);
-      let hours = Number(match[4]);
-      const minutes = Number(match[5]);
-      const seconds = Number(match[6]);
-      const ampm = String(match[7]).toLowerCase();
-
-      if (ampm === "pm" && hours !== 12) hours += 12;
-      if (ampm === "am" && hours === 12) hours = 0;
-
-      const mm = String(month).padStart(2, "0");
-      const dd = String(day).padStart(2, "0");
-      const hh = String(hours).padStart(2, "0");
-      const mi = String(minutes).padStart(2, "0");
-      const ss = String(seconds).padStart(2, "0");
-
-      const iso = `${year}-${mm}-${dd}T${hh}:${mi}:${ss}+05:30`;
-      const date = new Date(iso);
-      return isNaN(date.getTime()) ? null : date;
-    };
+    console.log("Files to scan:", filesToScan);
 
     const entries = [];
 
@@ -913,77 +883,116 @@ app.get("/api/alarm-history", async (req, res) => {
         crlfDelay: Infinity,
       });
 
-      for await (const line of rl) {
-        const text = String(line || "").trim();
-        if (!text) continue;
+      let lineCount = 0;
 
-        // Timestamp is always the first bracket.
+
+      for await (const line of rl) {
+        lineCount++;
+
+        if (lineCount <= 5) {
+          console.log("LINE:", line);
+        }
+
+        const text = String(line || "").trim();
+
+        console.log("------------------------------------------------");
+        console.log("LINE:", text);
+
+        if (!text) {
+          console.log("Skipped: Empty line");
+          continue;
+        }
+
         const tsMatch = text.match(/^\s*\[([^\]]+)\]/);
-        if (!tsMatch) continue;
+
+        if (!tsMatch) {
+          console.log("Skipped: Regex didn't match");
+          continue;
+        }
+
+        console.log("Timestamp String:", tsMatch[1]);
 
         const timestamp = parseIstLogTimestamp(tsMatch[1]);
-        if (!timestamp) continue;
-        if (timestamp < fromDate || timestamp > toDate) continue;
 
-        // Support BOTH formats:
-        // 1) New: [ts] | [InVolt:11,OutVolt:35,...,Door Alarm]
-        // 2) Old: [ts] | MAC: ... | Input Voltage: ...,Door Alarm
-        let payload = "";
+        console.log("Parsed Timestamp:", timestamp);
+        console.log("From:", fromDate);
+        console.log("To:", toDate);
 
-        const newPayloadMatch = text.match(/\|\s*\[([^\]]*)\]\s*$/);
-        if (newPayloadMatch) {
-          payload = newPayloadMatch[1];
-        } else {
+        if (!timestamp) {
+          console.log("Skipped: Invalid timestamp");
+          continue;
+        }
+
+        if (timestamp < fromDate || timestamp > toDate) {
+          console.log("Skipped: Outside range");
+          continue;
+        }
+        let payload = null;
+
+        if (!text.includes("ALARM:")) {
+
           const pipeParts = text
             .split("|")
-            .map((p) => p.trim())
+            .map(p => p.trim())
             .filter(Boolean);
-          if (pipeParts.length < 3) continue;
+
+          if (pipeParts.length < 3)
+            continue;
+
           payload = pipeParts.slice(2).join(" | ");
         }
 
-        const tokens = String(payload)
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean);
+        const parsedEntries = parseAlarmLine(
+          text,
+          payload,
+          timestamp
+        );
 
-        // Build UI-friendly rows: time / name / value
-        for (const token of tokens) {
-          const idx = token.indexOf(":");
-          if (idx === -1) {
-            entries.push({
-              timestamp: timestamp.toISOString(),
-              name: token,
-              value: "1",
-            });
-            continue;
-          }
-          const name = token.slice(0, idx).trim();
-          const value = token.slice(idx + 1).trim();
-          if (!name) continue;
-          entries.push({
-            timestamp: timestamp.toISOString(),
-            name,
-            value,
-          });
+        console.log("Parsed:", parsedEntries);
+
+        if (parsedEntries && parsedEntries.length) {
+          entries.push(...parsedEntries);
         }
       }
     }
+    console.log("Logs send successfully to UI")
+
+    const start = (pageNo - 1) * pageLimit;
+
+    const pageEntries = entries.slice(
+      start,
+      start + pageLimit
+    );
+
+    alarmHistoryCache.set(
+      cacheKey,
+      entries,
+      baseDir
+    );
 
     res.json({
       mac,
       from,
       to,
-      entries,
+      entries: pageEntries,
+      total: entries.length,
+      page: pageNo,
+      limit: pageLimit,
+      totalPages: Math.ceil(entries.length / pageLimit)
     });
 
-  } catch (error) {
-    console.error("Error in /api/alarm-history:", error?.stack || error);
+
+  } catch (err) {
+
+    console.error("===== Alarm History Error =====");
+    console.error(err);
+    console.error(err.stack);
+
     res.status(500).json({
       ok: false,
-      error: "Failed to fetch alarm history",
-      message: "Error in fetching alarm logs"
-    })
+      error: err.message,
+      stack: err.stack
+    });
   }
 })
 
@@ -1319,7 +1328,9 @@ const server = net.createServer((socket) => {
       // console.log(`Total buffer size: ${buffer.length} bytes`);
 
       // let mac = null;
-      while (socket.buffer.length >= 58) {
+      while (socket.buffer.length >= 58 ||
+        socket.buffer.slice(0, 6).toString("ascii") === "#EVENT"
+      ) {
         packetCount++;
 
         // Handle protocol preamble once after device restart
@@ -1329,6 +1340,54 @@ const server = net.createServer((socket) => {
             socket.buffer = socket.buffer.slice(4);
             socket.preambleHandled = true;
           }
+        }
+
+        if (
+          socket.buffer.length >= 6 &&
+          socket.buffer.slice(0, 6).toString("ascii") === "#EVENT"
+        ) {
+
+          // Dump packet ends with \r\n
+          const endIndex = socket.buffer.indexOf(
+            Buffer.from("\r\n")
+          );
+
+          // Complete dump packet has not arrived yet
+          if (endIndex === -1) {
+            break;
+          }
+
+          // Extract only #EVENT ... \r\n
+          const dumpBuffer = socket.buffer.slice(0, endIndex + 2);
+
+          // Remove dump packet from buffer
+          socket.buffer = socket.buffer.slice(endIndex + 2);
+
+          // Remove NUL padding if present
+          const dumpPacket = dumpBuffer
+            .toString("ascii")
+            .replace(/\0/g, "")
+            .trim();
+
+          console.log("========================================");
+          console.log("📜 PAST ALARM DUMP RECEIVED");
+          console.log("IP:", "will be extracted separately if needed");
+          console.log("Length:", dumpBuffer.length);
+          console.log(dumpPacket);
+          console.log("========================================");
+
+          // Send dump packet to Incoming Log Worker
+          if (INC_LOGS_CMD) {
+            publishLog({
+              type: "dump",
+              
+              mac: socket.deviceId || "UNKNOWN",
+              packet: dumpPacket,
+              timestamp: new Date().toISOString()
+            });
+          }
+
+          continue;
         }
 
         const header = socket.buffer.slice(0, 8).toString('ascii');
@@ -1446,7 +1505,7 @@ const server = net.createServer((socket) => {
         const hupsRes = packet[56];
         const failMask = packet[57];
 
-        // console.log("Door status: ", doorStatus);
+        // console.log("Fire Alarm: ", fireAlarm);
         // console.log("pwsFailCount: ", pwsFailCount);
 
         const packetTimestamp = new Date();
@@ -1464,6 +1523,7 @@ const server = net.createServer((socket) => {
           hupsAlarms[i] = (hupsStat >> (i) & 0x01);
         }
 
+        console.log("hups", hupsAlarms)
         /*
           Extracting Individual Fan Status from 'fanStatusBits' using bitwise operations. 
           Each fan's status is represented by 2 bits within the 'fanStatusBits' integer. 
@@ -1669,7 +1729,13 @@ const server = net.createServer((socket) => {
           fireAlarm,
           fanStatus,
           pwsFailCount,
-          timestamp: new Date()
+          timestamp: new Date(),
+          mainStatus: hupsAlarms[0],
+          rectStatus: hupsAlarms[1],
+          inveStatus: hupsAlarms[2],
+          overStatus: hupsAlarms[3],
+          mptStatus: hupsAlarms[4],
+          mosfStatus: hupsAlarms[5]
         });
 
         // ========================== RABBIT MQ ALARM WORKER ==========================

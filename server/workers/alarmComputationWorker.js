@@ -19,7 +19,13 @@ async function start() {
       lockStatus,
       fireAlarm,
       pwsFailCount,
-      fanStatus
+      fanStatus, 
+      mainStatus,
+      rectStatus,
+      inveStatus,
+      overStatus,
+      mptStatus,
+      mosfStatus
     } = data;
 
     const activeAlarms = [];
@@ -69,12 +75,39 @@ async function start() {
       activeAlarms.push(`Wrong password attempt: ${wrongPasswordAttempts}`);
     }
 
+        if (mainStatus === 0) {
+      activeAlarms.push("Mains Alarm")
+    }
+
+    if (rectStatus === 0) {
+      activeAlarms.push("Rectifier Alarm")
+    }
+
+    if (inveStatus === 0) {
+      activeAlarms.push("Inverter Alarm")
+    }
+
+    if (overStatus === 0) {
+      activeAlarms.push("OverLoad Alarm")
+    }
+
+    if (mptStatus === 0) {
+      activeAlarms.push("MPT Alarm")
+    }
+
+    if (mosfStatus === 0) {
+      activeAlarms.push("MOSFET Alarm")
+    }
+
+
     // 🔔 Binary alarms
     if (waterLogging) activeAlarms.push("Water Logging Alarm");
     if (waterLeakage) activeAlarms.push("Water Leakage Alarm");
     if (doorStatus === "OPEN") activeAlarms.push("Door Alarm");
     if (lockStatus === "OPEN") activeAlarms.push("Lock Alarm");
     if (fireAlarm) activeAlarms.push("Fire Alarm");
+
+    console.log("activeAlarms", activeAlarms)
 
     if (activeAlarms.length > 0) {
       publishAlarmResult({

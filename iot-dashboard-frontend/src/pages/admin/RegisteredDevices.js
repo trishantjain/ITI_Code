@@ -136,7 +136,7 @@ const RegisteredDevices = () => {
                             <th>Address</th>
                             <th>Latitude</th>
                             <th>Longitude</th>
-                            <th>Camera</th>
+                            {/* <th>Camera</th> */}
                             <th>Action</th>
                             <th>Edit</th>
                             <th>Approval</th>
@@ -373,7 +373,7 @@ const EditableRow = ({ device, onUpdated, onDeleted }) => {
                     )}
                 </td>
 
-                <td>
+                {/* <td>
                     {device.ipCamera?.ip ? (
                         <a
                             href={`https://${device.ipCamera.ip}`}
@@ -385,7 +385,7 @@ const EditableRow = ({ device, onUpdated, onDeleted }) => {
                     ) : (
                         "-"
                     )}
-                </td>
+                </td> */}
 
                 <td>
                     <button onClick={handleDelete}>❌ Delete</button>
