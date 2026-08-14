@@ -275,15 +275,15 @@ async function startWorker() {
 
                                 const snapshotMessage = {
                                     type: "dump",
-
                                     mac: data.mac,
-
                                     cameraIP: data.mac,
-
                                     cameraType: "T",
-
                                     cameraId:
-                                        parsed.cameraId
+                                        parsed.cameraId,
+
+                                    // Timestamp from the actual dump event
+                                    eventDate: parsed.formattedDate,
+                                    eventTime: parsed.eventTime
                                 };
 
                                 channel.sendToQueue(
@@ -294,7 +294,6 @@ async function startWorker() {
                                             snapshotMessage
                                         )
                                     ),
-
                                     {
                                         persistent: true
                                     }

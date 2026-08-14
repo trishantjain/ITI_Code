@@ -544,8 +544,26 @@ async function startWorker() {
                 return;
             }
 
-            const timestamp = getFormattedDateTime();
+            let timestamp;
+
+            if (
+                data.type === "dump" &&
+                data.eventDate &&
+                data.eventTime
+            ) {
+                const eventDate =
+                    String(data.eventDate).replace(/\//g, "_");
+
+                const eventTime =
+                    String(data.eventTime).replace(/:/g, "_");
+
+                timestamp = `${eventDate}_${eventTime}`;
+            } else {
+                timestamp = getFormattedDateTime();
+            }
+
             const snapshotFileName = `image_${timestamp}.jpg`;
+
             const macSuffix = String(mac).slice(8).replace(/[. ]/g, "_");
 
             const snapshotOutputDirMac = path.join(
